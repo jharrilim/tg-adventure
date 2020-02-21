@@ -1,0 +1,25 @@
+{
+  "name": "tg-adventure",
+  "version": "0.1.0",
+  "description": "tg quest",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src",
+    "nodemon": "nodemon",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "telegram",
+    "adventure"
+  ],
+  "author": "Joseph Harrison-Lim",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongodb": "^3.5.3",
+    "node-telegram-bot-api": "^0.40.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
