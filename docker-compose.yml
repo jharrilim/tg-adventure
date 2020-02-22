@@ -2,8 +2,11 @@ version: "3.7"
 services:
   app:
     build: .
+    volumes:
+      - .:/app
     environment:
-      MONGO_URL: mongodb://mongo:27017
+      NTBA_FIX_319: 1 # issue with node-telegram-bot-api
+      MONGO_URL: mongo:27017
       MONGO_USERNAME: root
       MONGO_PASSWORD: example
     depends_on:
@@ -11,8 +14,10 @@ services:
   mongo:
     image: mongo:latest
     restart: always
+    ports: 
+      - 27017:27017
     volumes:
-      - ./data:/data/db
+      - ./data:/data
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
