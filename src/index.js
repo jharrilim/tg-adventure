@@ -69,6 +69,14 @@ const sample = (arr = []) => Math.floor(Math.random() * arr.length);
       parse_mode: 'MarkdownV2',
     });
 
+  const clearButtons = ({ chat_id, message_id }) => bot
+    .editMessageReplyMarkup({
+      inline_keyboard: [[]]
+    }, {
+      chat_id,
+      message_id
+    });
+
   bot.onText(/^\/join/, async msg => {
     try {
       const player = await createUser({
@@ -141,41 +149,64 @@ const sample = (arr = []) => Math.floor(Math.random() * arr.length);
     const data = JSON.parse(query.data || {});
     switch (Number.parseInt(data.t || -1)) {
       case ActionType.Event:
-        Number.parseInt(data.i)
+        const event = areas[+data.a].events[+data.e];
+        const action = event.actions[+data.i];
+        await clearButtons({
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+        });
+        await bot.sendMessage(
+          query.message.chat.id,
+          escape(action.response),
+          { parse_mode: 'MarkdownV2' }
+        );
+        switch (action.type) {
+          case 'skip':
+            break;
+          case 'item:get':
+            break;
+          case 'coolit':
+            break;
+          default:
+            break;
+        }
         break;
       case ActionType.Area:
-        switch(Number.parseInt(data.i)) {
+        switch (Number.parseInt(data.i)) {
           case 0: // Go
-          const game = await Game.findById(query.message.chat.id);
-          console.log(game);
-          const eventIndex = sample(areas[game.area].events);
-          const event = areas[game.area].events[eventIndex];
-          bot.editMessageText(
-            event.description,
-            {
+            const game = await Game.findById(query.message.chat.id);
+            console.log(game);
+            const eventIndex = sample(areas[game.area].events);
+            const event = areas[game.area].events[eventIndex];
+            await clearButtons({
               chat_id: query.message.chat.id,
               message_id: query.message.message_id,
-            }
-          )
-          bot.editMessageReplyMarkup({
-            inline_keyboard: [
-              event.actions.map((action, i) => ({
-                text: action.text,
-                callback_data: JSON.stringify({
-                  t: ActionType.Event,
-                  e: eventIndex,
-                  a: game.area,
-                  i
-                })
-              }))
-            ]
-          }, {
-            chat_id: query.message.chat.id,
-            message_id: query.message.message_id,
-          })
-          break;
+            });
+            await bot.sendMessage(
+              query.message.chat.id,
+              escape(event.description),
+              {
+                parse_mode: 'MarkdownV2',
+                reply_markup: {
+                  remove_keyboard: true,
+                  resize_keyboard: true,
+                  inline_keyboard: [
+                    event.actions.map((action, i) => ({
+                      text: escape(action.text),
+                      callback_data: JSON.stringify({
+                        t: ActionType.Event,
+                        e: eventIndex,
+                        a: game.area,
+                        i
+                      })
+                    }))
+                  ]
+                }
+              }
+            );
+            break;
           case 1: // Skip
-          break;
+            break;
         }
       default:
         break;

@@ -27,11 +27,19 @@ module.exports = [
                 health: 10,
                 stamina: 10,
               }
-            ]
+            ],
+            response: unindent(`
+              You choose to take the chocolate bars.
+              They do seem pretty delicious\\!
+            `)
           },
           {
             text: 'Don\'t Take',
             type: 'skip',
+            response: unindent(`
+              You choose to not take any chocolate bars.
+              They don't seem to have your favourite flavour.
+            `)
           },
           {
             text: 'COOL IT!',
