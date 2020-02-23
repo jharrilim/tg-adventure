@@ -1,14 +1,17 @@
-const mongoose = require('mongoose');
+const { Schema, model } = require('mongoose');
+const { AreaSchema } = require('./area.model');
 
-const GameSchema = new mongoose.Schema({
+const GameSchema = new Schema({
   _id: Number,
   players: {
     type: Map,
     of: Boolean,
   },
   distance: Number,
+  difficulty: Number,
+  area: Number,
 });
 
-const Game = mongoose.model('Game', GameSchema);
+const Game = model('Game', GameSchema);
 
 module.exports = Game;

@@ -3,10 +3,19 @@ const TelegramBot = require('node-telegram-bot-api');
 const connect = require('./connect');
 const Player = require('./player.model');
 const Game = require('./game.model');
+const areas = require('./areas');
+const { escape } = require('./text');
 
 const {
   BOT_API_TOKEN,
 } = process.env;
+
+const ActionType = {
+  Event: 1 << 0,
+  Area: 1 << 1,
+};
+
+const sample = (arr = []) => Math.floor(Math.random() * arr.length);
 
 (async () => {
   await connect();
@@ -24,12 +33,42 @@ const {
         name,
         firstName,
         lastName,
-        health: 100,
+        health: 10,
+        stamina: 10,
       });
     } catch {
       return {};
     }
   }
+
+  const displayArea = (chatId, { name, description, difficulty }) => bot.sendMessage(
+    chatId,
+    escape(`*${name}*\n${description}`),
+    {
+      reply_markup: {
+        resize_keyboard: true,
+        remove_keyboard: true,
+        inline_keyboard: [[
+          {
+            text: 'Go',
+            callback_data: JSON.stringify({
+              t: ActionType.Area,
+              i: 0,
+            })
+          },
+          {
+            text: `Skip (-${difficulty} Stamina)`,
+            callback_data: JSON.stringify({
+              t: ActionType.Area,
+              i: 1,
+              d: difficulty,
+            })
+          }
+        ]]
+      },
+      parse_mode: 'MarkdownV2',
+    });
+
   bot.onText(/^\/join/, async msg => {
     try {
       const player = await createUser({
@@ -60,27 +99,39 @@ const {
         firstName: msg.from.first_name,
         lastName: msg.from.last_name,
       });
+      const startingAreas = areas.filter(area => area.difficulty === 1);
+      const startingAreaIndex = sample(startingAreas);
+      const { description, name, difficulty } = startingAreas[startingAreaIndex];
       Game.create({
         _id: msg.chat.id,
         distance: 0,
+        difficulty: 1,
+        area: startingAreaIndex,
         players: {
           [msg.from.id]: true,
         },
       }).catch(_ => console.info('Game already exists'));
-      await bot.sendMessage(msg.chat.id, 'What do you do next?', {
-        reply_markup: {
-          resize_keyboard: true,
-          remove_keyboard: true,
-          inline_keyboard: [[
-            {
-              text: 'Yeet?',
-              callback_data: JSON.stringify({
-                action: 'yeet'
-              })
-            }
-          ]]
-        }
-      });
+      await bot.sendMessage(msg.chat.id, 'Your adventure begins.');
+      await displayArea(msg.chat.id, { description, name, difficulty });
+      // await bot.sendMessage(
+      //   msg.chat.id,
+      //   escape(`*${start.name}*\n${start.description}`),
+      //   {
+      //     reply_markup: {
+      //       resize_keyboard: true,
+      //       remove_keyboard: true,
+      //       inline_keyboard: [
+      //         start.events[0].actions.map((action, i) => ({
+      //           text: escape(action.text),
+      //           callback_data: JSON.stringify({
+      //             t: ActionType.Event,
+      //             i
+      //           })
+      //         }))
+      //       ]
+      //     },
+      //     parse_mode: 'MarkdownV2',
+      //   });
     } catch (e) {
       console.error(e);
     }
@@ -88,11 +139,44 @@ const {
 
   bot.on('callback_query', async query => {
     const data = JSON.parse(query.data || {});
-    switch (data.action || '') {
-      case 'yeet':
-        await bot.deleteMessage(query.message.chat.id, query.message.message_id);
-        await bot.sendMessage(query.message.chat.id, 'You yeeted!');
+    switch (Number.parseInt(data.t || -1)) {
+      case ActionType.Event:
+        Number.parseInt(data.i)
         break;
+      case ActionType.Area:
+        switch(Number.parseInt(data.i)) {
+          case 0: // Go
+          const game = await Game.findById(query.message.chat.id);
+          console.log(game);
+          const eventIndex = sample(areas[game.area].events);
+          const event = areas[game.area].events[eventIndex];
+          bot.editMessageText(
+            event.description,
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+            }
+          )
+          bot.editMessageReplyMarkup({
+            inline_keyboard: [
+              event.actions.map((action, i) => ({
+                text: action.text,
+                callback_data: JSON.stringify({
+                  t: ActionType.Event,
+                  e: eventIndex,
+                  a: game.area,
+                  i
+                })
+              }))
+            ]
+          }, {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+          })
+          break;
+          case 1: // Skip
+          break;
+        }
       default:
         break;
     }
